@@ -9,21 +9,16 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    container:
+      image: devkitpro/devkitarm:latest
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
 
-      - name: Install devkitPro 3DS toolchain
-        uses: devkitPro/pacman@v1
-        with:
-          # devkitARM, libctru, Citro3D and Citro2D
-          package: 3ds-dev 3ds-citro2d
-
       - name: Build .3dsx
-        shell: bash
         run: |
-          echo "DEVKITPRO=$DEVKITPRO" >> "$GITHUB_ENV"
-          echo "DEVKITARM=$DEVKITPRO/devkitARM" >> "$GITHUB_ENV"
+          export DEVKITPRO=/opt/devkitpro
+          export DEVKITARM=/opt/devkitpro/devkitARM
           make
 
       - name: Upload Homebrew Launcher build
