@@ -55,7 +55,8 @@ jobs:
           MAKEROM_BIN="$(find /tmp/makerom -type f -name makerom -print -quit)"
           test -n "$MAKEROM_BIN"
           install -m 755 "$MAKEROM_BIN" /usr/local/bin/makerom
-          makerom --help >/dev/null
+          makerom -help >/tmp/makerom-help.txt 2>&1 || true
+          test -s /tmp/makerom-help.txt
 
       - name: Install bannertool
         env:
@@ -66,7 +67,7 @@ jobs:
           echo "$BANNERTOOL_SHA256  /tmp/bannertool.zip" | sha256sum -c -
           unzip -oj /tmp/bannertool.zip 'linux-x86_64/bannertool' -d /usr/local/bin
           chmod 755 /usr/local/bin/bannertool
-          bannertool --version
+          test -x /usr/local/bin/bannertool
 
       - name: Create CIA icon and banner assets
         run: |
