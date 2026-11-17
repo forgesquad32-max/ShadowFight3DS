@@ -15,7 +15,7 @@ DATA     :=
 INCLUDES := include
 GRAPHICS :=
 GFXBUILD := $(BUILD)
-ROMFS    := romfs
+ROMFS    :=
 
 APP_TITLE       := Shadow Fight 3DS
 APP_DESCRIPTION := Original 2D shadow-fighting game
