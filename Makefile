@@ -27,12 +27,11 @@ ARCH := -march=armv6k -mtune=mpcore -mfloat-abi=hard -mtp=soft
 # Core 3DS libraries and 3DS port libraries.
 LIBDIRS := $(PORTLIBS) $(CTRULIB)
 
-CFLAGS := -g -Wall -Wextra -O2 -mword-relocations -ffunction-sections -fdata-sections $(ARCH) \
-          $(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
-          $(foreach dir,$(LIBDIRS),-I$(dir)/include) -D__3DS__
+CFLAGS := -g -Wall -Wextra -O2 -mword-relocations -ffunction-sections -fdata-sections $(ARCH)
+CFLAGS += $(INCLUDE) -D__3DS__
 CXXFLAGS := $(CFLAGS) -std=gnu++17 -fno-rtti -fno-exceptions
 ASFLAGS  := -g $(ARCH)
-LDFLAGS  := -specs=3dsx.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
+LDFLAGS  = -specs=3dsx.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
 LIBS     := -lcitro2d -lcitro3d -lctru -lm
 
 ifneq ($(BUILD),$(notdir $(CURDIR)))
