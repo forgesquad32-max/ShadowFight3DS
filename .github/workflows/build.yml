@@ -1,0 +1,37 @@
+name: Build Nintendo 3DS game
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Install devkitPro 3DS toolchain
+        uses: devkitPro/pacman@v1
+        with:
+          # devkitARM, libctru, Citro3D and Citro2D
+          package: 3ds-dev 3ds-citro2d
+
+      - name: Build .3dsx
+        shell: bash
+        run: |
+          echo "DEVKITPRO=$DEVKITPRO" >> "$GITHUB_ENV"
+          echo "DEVKITARM=$DEVKITPRO/devkitARM" >> "$GITHUB_ENV"
+          make
+
+      - name: Upload Homebrew Launcher build
+        uses: actions/upload-artifact@v4
+        with:
+          name: ShadowFight3DS-homebrew
+          path: |
+            ShadowFight3DS.3dsx
+            ShadowFight3DS.elf
+          if-no-files-found: error
+          retention-days: 14
