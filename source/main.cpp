@@ -2,5 +2,11 @@
 #include <citro2d.h>
 #include "game.hpp"
 static sf3ds::Game game;
-static sf3ds::Input readInput(){sf3ds::Input in{};hidScanInput();const u32 down=hidKeysDown(),held=hidKeysHeld();circlePosition pad{};hidCircleRead(&pad);in.move=pad.dx/156.0f;if(in.move>1)in.move=1;if(in.move< -1)in.move=-1;in.jump=(down&KEY_UP)!=0;in.punch=(down&KEY_A)!=0;in.kick=(down&KEY_B)!=0;in.weapon=(down&KEY_X)!=0;in.block=(held&KEY_Y)!=0;in.dodge=(down&KEY_L)!=0;in.special=(down&KEY_R)!=0;in.start=(down&KEY_START)!=0;in.confirm=in.punch;if(held&KEY_TOUCH){touchPosition t{};hidTouchRead(&t);if(t.py>82){int col=t.px/107,row=t.py>=158?1:0;if(row==0){if(col==0)in.touchDodge=true;else if(col==1)in.touchPunch=true;else in.touchKick=true;}else{if(col==0)in.touchWeapon=true;else if(col==1)in.touchBlock=true;else in.touchSpecial=true;}}}return in;}
+static sf3ds::Input readInput(){
+ sf3ds::Input in{};hidScanInput();const u32 down=hidKeysDown(),held=hidKeysHeld();circlePosition pad{};hidCircleRead(&pad);
+ in.move=pad.dx/156.0f;if(in.move>1)in.move=1;if(in.move< -1)in.move=-1;
+ in.jump=(down&KEY_UP)!=0;in.punch=(down&KEY_A)!=0;in.kick=(down&KEY_B)!=0;in.weapon=(down&KEY_X)!=0;in.block=(held&KEY_Y)!=0;in.dodge=(down&KEY_L)!=0;in.special=(down&KEY_R)!=0;in.start=(down&KEY_START)!=0;in.confirm=in.punch;
+ if(held&KEY_TOUCH){touchPosition t{};hidTouchRead(&t);in.touchX=t.px;in.touchY=t.py;in.touchTap=(down&KEY_TOUCH)!=0;if(t.py>82){int col=t.px/107,row=t.py>=158?1:0;if(row==0){if(col==0)in.touchDodge=true;else if(col==1)in.touchPunch=true;else in.touchKick=true;}else{if(col==0)in.touchWeapon=true;else if(col==1)in.touchBlock=true;else in.touchSpecial=true;}}}
+ return in;
+}
 int main(int,char**){gfxInitDefault();C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);C2D_Init(C2D_DEFAULT_MAX_OBJECTS);C2D_Prepare();C3D_RenderTarget*top=C2D_CreateScreenTarget(GFX_TOP,GFX_LEFT);C3D_RenderTarget*bottom=C2D_CreateScreenTarget(GFX_BOTTOM,GFX_LEFT);game.init();while(aptMainLoop()){const sf3ds::Input input=readInput();game.update(input);C3D_FrameBegin(C3D_FRAME_SYNCDRAW);C2D_SceneBegin(top);game.render();C2D_SceneBegin(bottom);game.renderControls();C3D_FrameEnd(0);}C2D_Fini();C3D_Fini();gfxExit();return 0;}
