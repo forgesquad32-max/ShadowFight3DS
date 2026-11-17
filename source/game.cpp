@@ -34,8 +34,8 @@ void Game::handleMenuTap(const Input&in){
  if(screen_==Screen::Hub){if(y>177){if(x<64)hubChoice_=0;else if(x<128)hubChoice_=1;else if(x<192)hubChoice_=2;else if(x<256)hubChoice_=3;else hubChoice_=4;
   if(hubChoice_==0)beginFight(Battle::Story);else if(hubChoice_==1)beginFight(Battle::Duel);else if(hubChoice_==2)beginFight(Battle::Boss);else if(hubChoice_==3){shopChoice_=0;screen_=Screen::Shop;}else{gearChoice_=0;screen_=Screen::Gear;}return;}
   if(y>92&&y<166){if(x<160)beginFight(Battle::Story);else beginFight(Battle::Duel);}
- }else if(screen_==Screen::Shop){if(y>180){screen_=Screen::Hub;return;}shopChoice_=clampf((y-54)/27,0,4);int i=shopChoice_;if(i>0&&!weaponOwned_[i]){if(i==4){if(gems_>=weaponCost[i]){gems_-=weaponCost[i];weaponOwned_[i]=true;}}else if(coins_>=weaponCost[i]){coins_-=weaponCost[i];weaponOwned_[i]=true;}}else if(weaponOwned_[i])weapon_=i;
- }else if(screen_==Screen::Gear){if(y>180){screen_=Screen::Hub;return;}gearChoice_=clampf((y-54)/27,0,4);int i=gearChoice_;if(armorOwned_[i])armor_=i;else if(i==4){if(gems_>=armorCost[i]){gems_-=armorCost[i];armorOwned_[i]=true;armor_=i;}}else if(coins_>=armorCost[i]){coins_-=armorCost[i];armorOwned_[i]=true;armor_=i;}}
+ }else if(screen_==Screen::Shop){if(y>216){screen_=Screen::Hub;return;}if(y<96||y>211)return;shopChoice_=clampf((y-96)/23,0,4);int i=shopChoice_;if(i>0&&!weaponOwned_[i]){if(i==4){if(gems_>=weaponCost[i]){gems_-=weaponCost[i];weaponOwned_[i]=true;}}else if(coins_>=weaponCost[i]){coins_-=weaponCost[i];weaponOwned_[i]=true;}}else if(weaponOwned_[i])weapon_=i;
+ }else if(screen_==Screen::Gear){if(y>216){screen_=Screen::Hub;return;}if(y<96||y>211)return;gearChoice_=clampf((y-96)/23,0,4);int i=gearChoice_;if(armorOwned_[i])armor_=i;else if(i==4){if(gems_>=armorCost[i]){gems_-=armorCost[i];armorOwned_[i]=true;armor_=i;}}else if(coins_>=armorCost[i]){coins_-=armorCost[i];armorOwned_[i]=true;armor_=i;}}
 }
 void Game::update(const Input&in){
  ++frame_;if(shake_)--shake_;if(hitFlash_)--hitFlash_;
@@ -127,7 +127,10 @@ void Game::renderControls()const{
   for(int i=0;i<5;i++){int y=100+i*23;rect(12,y,296,20,i==gearChoice_?PANEL2:PANEL);drawText(armors[i],20,y+1,.27f,PALE);}
   rect(12,218,296,18,RED);drawText("BACK TO HALL",105,218,.27f,PALE);
  }else{
-  drawText("THE ARENA",15,47,.48f,GOLD);drawText("Your loadout is ready",15,76,.3f,MUTED);drawText("A  PUNCH     B  KICK",15,117,.35f,PALE);drawText("X  WEAPON    R  SPECIAL",15,147,.35f,PALE);drawText("Y  BLOCK     L  DODGE",15,177,.35f,PALE);
+  drawText("ACTIVE LOADOUT",15,47,.48f,GOLD);drawText("Your fighter is in the arena",15,76,.3f,MUTED);
+  rect(12,100,296,47,PANEL);drawText("WEAPON",22,105,.26f,CYAN);drawText(weapons[weapon_],22,123,.34f,PALE);
+  rect(12,154,296,47,PANEL);drawText("ARMOR",22,159,.26f,GOLD);drawText(armors[armor_],22,177,.34f,PALE);
+  drawText("PAUSE WITH START",91,218,.27f,MUTED);
  }
 }
 }
