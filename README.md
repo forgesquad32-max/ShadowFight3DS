@@ -1,36 +1,47 @@
-# ShadowFight3DS
+# Chronicles of the Veil — Shadow Fight 3DS
 
-An original, lightweight 2D silhouette fighting game for Nintendo 3DS/2DS. It uses original procedural visuals and code, not proprietary Shadow Fight assets.
+An original 2D martial-arts fighting game for Nintendo 3DS/2DS, built with devkitPro, libctru and Citro2D. It takes inspiration from the side-view fighting and progression genre while using original names, character designs and game content.
 
-## Build from your phone
+## Build from an Android phone
 
-A GitHub Actions workflow is included. Pushes to `main` trigger a cloud build using devkitPro, so you do not need a PC.
+GitHub Actions builds the project in the cloud; no PC is required.
 
-1. Open the **Actions** tab in this repository.
-2. Select **Build Nintendo 3DS game**.
-3. Open the latest run and wait for it to finish successfully.
-4. Download the `ShadowFight3DS-homebrew` artifact from the completed run.
-5. Extract the ZIP on your phone and copy `ShadowFight3DS.3dsx` to your SD card, for example:
-   `/3ds/ShadowFight3DS/ShadowFight3DS.3dsx`
-6. Launch it with Homebrew Launcher on your 3DS.
+1. Open the repository's **Actions** tab.
+2. Open the latest **Build Nintendo 3DS game** run.
+3. Wait for the build to finish successfully.
+4. Download the release artifact and extract it.
+5. Copy `ShadowFight3DS.3dsx` to `/3ds/ShadowFight3DS/` on the SD card.
+6. Launch it through Homebrew Launcher.
 
-This workflow targets the Homebrew Launcher `.3dsx` format. It does not produce a CIA installer. CIA packaging needs valid application metadata, icon/banner assets and a separate packaging configuration.
+The CIA packaging job is experimental and is not considered ready until its workflow succeeds and its artifact is available. A CIA requires custom firmware and a CIA installer.
 
 ## Controls
 
 - Circle Pad: move
 - D-pad Up: jump
-- A: punch
+- A: punch / confirm
 - B: kick
 - X: weapon attack
 - Y (hold): block
 - L: dodge
-- R: special attack (requires energy)
-- START: return to mode selection
-- Touchscreen: six combat zones
+- R: special attack (uses energy)
+- START: return to the hall
 
-## Current status
+The bottom touchscreen is now a menu, shop, gear and loadout display; combat uses the physical controls.
 
-This is an early playable foundation, not a finished commercial-sized game. It currently includes a title screen, mode selection, one arena, procedural fighter silhouettes, movement, jumping, blocking, dodging, attacks, energy, health and basic enemy AI. Distinct mode objectives, multiple weapons, bosses, save data, authored animation, sound, full menus and final artwork remain to be developed.
+## Current game systems
 
-The GitHub Actions build must complete successfully before a downloadable artifact exists. The game still needs testing on physical 3DS hardware.
+- Two-screen interface with readable system-font text
+- Original armored martial-arts character designs drawn with lightweight 2D primitives
+- Campaign stage names and player XP/level progression
+- Duel and boss battle modes
+- Coin and gem rewards
+- Weapon shop with five weapon tiers; weapons increase attack damage
+- Armor shop with five armor tiers; armor increases maximum health and reduces incoming damage
+- Combo feedback, hit sparks, impact flashes and screen shake
+
+## Development status and limitations
+
+This is an expanding homebrew prototype, not a finished commercial game. Character art is currently procedural 2D artwork rather than hand-drawn sprite animation. The economy and progression currently reset when the application is restarted; persistent save files, authored animation, sound/music, more enemy moves, more stages and full balance testing remain future work.
+
+Build success does not guarantee performance on every 3DS model. Test on hardware before distributing a release.
