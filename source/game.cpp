@@ -13,10 +13,10 @@ constexpr u32 GREY = C2D_Color32(70, 70, 86, 255);
 constexpr u32 PALE = C2D_Color32(235, 225, 207, 255);
 float clampf(float v, float lo, float hi) { return std::max(lo, std::min(hi, v)); }
 void rect(float x, float y, float w, float h, u32 color) {
-    C2D_DrawRectSolid(x, y, 0.5f, w, h, 1.0f, color);
+    C2D_DrawRectSolid(x, y, 0.5f, w, h, color);
 }
 void circle(float x, float y, float radius, u32 color) {
-    C2D_DrawCircleSolid(x, y, 0.5f, radius, 16, color);
+    C2D_DrawCircleSolid(x, y, 0.5f, radius, color);
 }
 }
 
