@@ -15,7 +15,7 @@ unsigned saveHash(const unsigned char*p,size_t n){unsigned h=2166136261u;for(siz
 void saveProgress(int level,int xp,int wins,int coins,int gems,int weapon,int armor,const bool*wo,const bool*ao){
  mkdir("sdmc:/3ds",0777);mkdir("sdmc:/3ds/ShadowFight3DS",0777);SaveData d{};std::memcpy(d.magic,"SF3DSAV",7);d.version=1;d.level=level;d.xp=xp;d.wins=wins;d.coins=coins;d.gems=gems;d.weapon=weapon;d.armor=armor;
  for(int i=0;i<5;i++){d.weaponOwned[i]=wo[i]?1:0;d.armorOwned[i]=ao[i]?1:0;}d.checksum=saveHash(reinterpret_cast<const unsigned char*>(&d),offsetof(SaveData,checksum));
- FILE*f=std::fopen("sdmc:/3ds/ShadowFight3DS/save.dat","wb");if(f){std::fwrite(&d,sizeof(d),1,f);std::fflush(f);std::fclose(f);}
+ FILE*f=std::fopen("sdmc:/3ds/ShadowFight3DS/save.tmp","wb");if(f){bool ok=std::fwrite(&d,sizeof(d),1,f)==1&&std::fflush(f)==0;if(std::fclose(f)!=0)ok=false;if(ok)std::rename("sdmc:/3ds/ShadowFight3DS/save.tmp","sdmc:/3ds/ShadowFight3DS/save.dat");else std::remove("sdmc:/3ds/ShadowFight3DS/save.tmp");}
 }
 bool loadProgress(int&level,int&xp,int&wins,int&coins,int&gems,int&weapon,int&armor,bool*wo,bool*ao){
  FILE*f=std::fopen("sdmc:/3ds/ShadowFight3DS/save.dat","rb");if(!f)return false;SaveData d{};bool ok=std::fread(&d,sizeof(d),1,f)==1;std::fclose(f);
