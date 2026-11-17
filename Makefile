@@ -15,16 +15,17 @@ APP_TITLE       := Shadow Fight 3DS
 APP_DESCRIPTION := Original 2D shadow-fighting game
 APP_AUTHOR      := Forge Squad
 
-CFLAGS   := -g -Wall -Wextra -O2 -mword-relocations -ffunction-sections -fdata-sections
+CFLAGS   := -g -Wall -Wextra -O2 -mword-relocations -ffunction-sections -fdata-sections $(addprefix -I,$(INCLUDES))
 CXXFLAGS := $(CFLAGS) -std=gnu++17 -fno-rtti -fno-exceptions
-LDFLAGS  := -specs=3dsx.specs -Wl,-Map,$(notdir $*.map)
+LDFLAGS  := -specs=3dsx.specs -Wl,-Map,$(TARGET).map
 LIBS     := -lcitro2d -lcitro3d -lctru -lm
 LIBDIRS  := $(LIBCTRU) $(PORTLIBS)
 
 .PHONY: all clean
 all: $(TARGET).3dsx
 
-include $(DEVKITPRO)/3ds_rules
+# 3DS build rules are shipped with devkitARM, not at the devkitPro root.
+include $(DEVKITPRO)/devkitARM/3ds_rules
 
 clean:
-	@rm -rf $(BUILD) $(TARGET).3dsx $(TARGET).elf $(TARGET).smdh
+	@rm -rf $(BUILD) $(TARGET).3dsx $(TARGET).elf $(TARGET).smdh $(TARGET).map
