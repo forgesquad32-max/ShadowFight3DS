@@ -31,3 +31,111 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+  package:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Download 3DSX build inputs
+        uses: actions/download-artifact@v4
+        with:
+          name: ShadowFight3DS-3dsx
+
+      - name: Install makerom
+        env:
+          MAKEROM_URL: https://github.com/3DSGuy/Project_CTR/releases/download/makerom-v0.19.0/makerom-v0.19.0-ubuntu_x86_64.zip
+          MAKEROM_SHA256: 287b809dec064e0ad597e3d272c49ecb7eed41693d5ee6fef9d8a8aa24c2497e
+        run: |
+          curl -fsSL "$MAKEROM_URL" -o /tmp/makerom.zip
+          echo "$MAKEROM_SHA256  /tmp/makerom.zip" | sha256sum -c -
+          mkdir -p /tmp/makerom
+          unzip -q /tmp/makerom.zip -d /tmp/makerom
+          MAKEROM_BIN="$(find /tmp/makerom -type f -name makerom -print -quit)"
+          test -n "$MAKEROM_BIN"
+          install -m 755 "$MAKEROM_BIN" /usr/local/bin/makerom
+          makerom -help >/tmp/makerom-help.txt 2>&1 || true
+          test -s /tmp/makerom-help.txt
+
+      - name: Install bannertool
+        env:
+          BANNERTOOL_URL: https://github.com/Epicpkmn11/bannertool/releases/download/v1.2.2/bannertool.zip
+          BANNERTOOL_SHA256: e4259c08fe8944ebadd5f4b96f9a8603e5427338074cfc46323fbbc3410d51ed
+        run: |
+          curl -fsSL "$BANNERTOOL_URL" -o /tmp/bannertool.zip
+          echo "$BANNERTOOL_SHA256  /tmp/bannertool.zip" | sha256sum -c -
+          unzip -oj /tmp/bannertool.zip 'linux-x86_64/bannertool' -d /usr/local/bin
+          chmod 755 /usr/local/bin/bannertool
+          test -x /usr/local/bin/bannertool
+
+      - name: Generate CIA icon, banner and audio
+        run: |
+          python3 - <<'PY'
+          import struct, wave, zlib
+          from pathlib import Path
+
+          out = Path("build")
+          out.mkdir(exist_ok=True)
+
+          def png(path, width, height, banner=False):
+              pixels = bytearray()
+              for y in range(height):
+                  row = bytearray()
+                  for x in range(width):
+                      if banner:
+                          c = (13, 17, 28, 255)
+                          if y >= 108:
+                              c = (52, 28, 30, 255)
+                          for cx, scale in ((83, 1.0), (171, 0.9)):
+                              head = ((x-cx)**2 + (y-43)**2) < (12*scale)**2
+                              body = abs(x-cx) < 9*scale and 53 < y < 91
+                              legs = (abs(x-(cx-7*scale)) < 5*scale or abs(x-(cx+7*scale)) < 5*scale) and 88 < y < 112
+                              arms = abs(y-(67 + (x-cx)*0.18)) < 5*scale and abs(x-cx) < 33*scale and 55 < y < 85
+                              if head or body or legs or arms:
+                                  c = (2, 3, 7, 255)
+                          if abs(x-127) < 2 and 34 < y < 103:
+                              c = (230, 82, 54, 255)
+                      else:
+                          c = (13, 17, 28, 255)
+                          dx, dy = x-24, y-14
+                          if dx*dx + dy*dy < 9*9 or (10 < x < 39 and 23 < y < 43) or (13 <= x < 19 and 36 < y < 46) or (30 <= x < 36 and 36 < y < 46):
+                              c = (238, 238, 244, 255)
+                          if y > 43:
+                              c = (224, 78, 54, 255)
+                      row.extend(c)
+                  pixels.extend(b"\\x00" + row)
+              def chunk(tag, data):
+                  return struct.pack(">I", len(data)) + tag + data + struct.pack(">I", zlib.crc32(tag+data) & 0xffffffff)
+              data = b"\\x89PNG\\r\\n\\x1a\\n"
+              data += chunk(b"IHDR", struct.pack(">2I5B", width, height, 8, 6, 0, 0, 0))
+              data += chunk(b"IDAT", zlib.compress(bytes(pixels), 9))
+              data += chunk(b"IEND", b"")
+              Path(path).write_bytes(data)
+
+          png(out / "icon.png", 48, 48)
+          png(out / "banner.png", 256, 128, banner=True)
+          with wave.open(str(out / "silence.wav"), "wb") as wav:
+              wav.setnchannels(1)
+              wav.setsampwidth(2)
+              wav.setframerate(22050)
+              wav.writeframes(b"\\x00\\x00" * 22050)
+          PY
+          bannertool makesmdh -s "Shadow Fight 3DS" -l "Original 2D shadow fighting game" -p "Forge Squad" -i build/icon.png -o build/ShadowFight3DS.icn
+          bannertool makebanner -i build/banner.png -a build/silence.wav -o build/ShadowFight3DS.bnr
+
+      - name: Package CIA
+        run: |
+          makerom -f cia -o ShadowFight3DS.cia -rsf packaging/shadowfight3ds.rsf -target t -exefslogo -elf ShadowFight3DS.elf -icon build/ShadowFight3DS.icn -banner build/ShadowFight3DS.bnr -desc app:4
+          test -s ShadowFight3DS.cia
+          ls -lh ShadowFight3DS.cia ShadowFight3DS.3dsx
+
+      - name: Upload installable Nintendo 3DS builds
+        uses: actions/upload-artifact@v4
+        with:
+          name: ShadowFight3DS-CIA-release
+          path: |
+            ShadowFight3DS.cia
+            ShadowFight3DS.3dsx
+          if-no-files-found: error
+          retention-days: 14
