@@ -2,179 +2,38 @@
 #include <citro2d.h>
 #include <algorithm>
 #include <cmath>
-
-namespace sf3ds {
-namespace {
-constexpr float FLOOR = 205.0f;
-constexpr u32 INK = C2D_Color32(5, 5, 12, 255);
-constexpr u32 RED = C2D_Color32(220, 42, 55, 255);
-constexpr u32 GOLD = C2D_Color32(226, 177, 76, 255);
-constexpr u32 GREY = C2D_Color32(70, 70, 86, 255);
-constexpr u32 PALE = C2D_Color32(235, 225, 207, 255);
-float clampf(float v, float lo, float hi) { return std::max(lo, std::min(hi, v)); }
-void rect(float x, float y, float w, float h, u32 color) {
-    C2D_DrawRectSolid(x, y, 0.5f, w, h, color);
+namespace sf3ds { namespace {
+constexpr float FLOOR=204; constexpr u32 INK=C2D_Color32(8,9,17,255),RED=C2D_Color32(238,57,72,255),GOLD=C2D_Color32(255,197,91,255),CYAN=C2D_Color32(77,218,230,255),PALE=C2D_Color32(241,234,220,255),MUTED=C2D_Color32(93,99,119,255);
+float clampf(float v,float a,float b){return std::max(a,std::min(b,v));}
+void rect(float x,float y,float w,float h,u32 c){C2D_DrawRectSolid(x,y,.5f,w,h,c);} void circle(float x,float y,float r,u32 c){C2D_DrawCircleSolid(x,y,.5f,r,c);}
+void bar(float x,float y,float w,float h,int v,int m,u32 c){rect(x,y,w,h,C2D_Color32(40,42,57,255));rect(x+2,y+2,(w-4)*clampf((float)v/m,0,1),h-4,c);}
 }
-void circle(float x, float y, float radius, u32 color) {
-    C2D_DrawCircleSolid(x, y, 0.5f, radius, color);
-}
-}
-
-void Game::init() {
-    screen_ = Screen::Title;
-    round_ = 1;
-    frame_ = 0;
-}
-void Game::beginFight() {
-    player_ = Fighter{};
-    rival_ = Fighter{};
-    player_.x = 105.0f;
-    rival_.x = 295.0f;
-    rival_.hp = std::min(100 + round_ * 5, 160);
-    screen_ = Screen::Fight;
-}
-void Game::startAttack(Fighter& f, int type) {
-    if (f.cooldown || f.attackTimer || f.stun) return;
-    if (type == 4 && f.energy < 50) return;
-    f.attackType = type;
-    f.attackTimer = type == 4 ? 22 : (type == 3 ? 16 : 12);
-    f.cooldown = type == 4 ? 38 : 19;
-    if (type == 4) f.energy -= 50;
-}
-void Game::update(const Input& in) {
-    ++frame_;
-    if (screen_ == Screen::Title) {
-        if (in.confirm || in.start) screen_ = Screen::Select;
-        return;
-    }
-    if (screen_ == Screen::Select) {
-        if (in.move < -0.4f) selected_ = (selected_ + 4) % 5;
-        if (in.move > 0.4f) selected_ = (selected_ + 1) % 5;
-        if (in.confirm || in.start) beginFight();
-        return;
-    }
-    if (in.start) {
-        screen_ = Screen::Select;
-        return;
-    }
-    if (screen_ == Screen::Result) {
-        if (resultTimer_ > 0) --resultTimer_;
-        if (in.confirm || resultTimer_ == 0) {
-            if (won_) ++round_;
-            screen_ = Screen::Select;
-        }
-        return;
-    }
-    updateFight(in);
-}
-void Game::updateFight(const Input& in) {
-    auto tick = [](Fighter& f) {
-        if (f.cooldown > 0) --f.cooldown;
-        if (f.attackTimer > 0) --f.attackTimer;
-        if (f.attackTimer == 0) f.attackType = 0;
-        if (f.stun > 0) --f.stun;
-        if (f.invuln > 0) --f.invuln;
-        if (!f.grounded) {
-            f.vy += 0.42f;
-            f.y += f.vy;
-            if (f.y >= FLOOR) { f.y = FLOOR; f.vy = 0; f.grounded = true; }
-        }
-    };
-    tick(player_);
-    tick(rival_);
-    player_.blocking = in.block || in.touchBlock;
-    if (!player_.stun && !player_.blocking) player_.x += in.move * 2.5f;
-    player_.x = clampf(player_.x, 28.0f, 372.0f);
-    if (player_.grounded && in.jump) { player_.vy = -7.0f; player_.grounded = false; }
-    if ((in.dodge || in.touchDodge) && player_.invuln == 0) {
-        player_.x = clampf(player_.x - player_.facing * 28.0f, 28.0f, 372.0f);
-        player_.invuln = 18;
-    }
-    if (in.punch || in.touchPunch) startAttack(player_, 1);
-    if (in.kick || in.touchKick) startAttack(player_, 2);
-    if (in.weapon || in.touchWeapon) startAttack(player_, 3);
-    if (in.special || in.touchSpecial) startAttack(player_, 4);
-
-    player_.facing = player_.x < rival_.x ? 1 : -1;
-    rival_.facing = rival_.x < player_.x ? 1 : -1;
-    const float distance = std::fabs(player_.x - rival_.x);
-    if (!rival_.stun) {
-        if (distance > 70.0f) rival_.x += rival_.facing * 1.0f;
-        else if (!rival_.cooldown && !rival_.attackTimer)
-            startAttack(rival_, ((frame_ / 41) % 3) == 0 ? 3 : (((frame_ / 41) % 3) == 1 ? 2 : 1));
-    }
-    rival_.x = clampf(rival_.x, 28.0f, 372.0f);
-
-    auto hit = [](Fighter& a, Fighter& b) {
-        if (a.attackTimer < 5 || a.attackTimer > 11 || !a.attackType) return;
-        const float range = a.attackType == 1 ? 43.0f : (a.attackType == 2 ? 58.0f : (a.attackType == 3 ? 72.0f : 82.0f));
-        if (std::fabs(a.x - b.x) > range || b.invuln) return;
-        if (a.facing != (b.x > a.x ? 1 : -1)) return;
-        int damage = a.attackType == 1 ? 7 : (a.attackType == 2 ? 11 : (a.attackType == 3 ? 14 : 24));
-        if (b.blocking) damage = std::max(1, damage / 4);
-        b.hp = std::max(0, b.hp - damage);
-        b.stun = b.blocking ? 3 : 9;
-        b.x = clampf(b.x + a.facing * 9.0f, 28.0f, 372.0f);
-        a.energy = std::min(100, a.energy + 13);
-        a.attackTimer = 4;
-    };
-    hit(player_, rival_);
-    hit(rival_, player_);
-    if (player_.hp <= 0 || rival_.hp <= 0) {
-        won_ = rival_.hp <= 0;
-        resultTimer_ = 150;
-        screen_ = Screen::Result;
-    }
-}
-void Game::drawFighter(const Fighter& f) const {
-    const u32 color = f.invuln && (frame_ % 4 < 2) ? PALE : INK;
-    circle(f.x, f.y - 67.0f, 10.0f, color);
-    rect(f.x - 8, f.y - 57, 16, 34, color);
-    if (f.blocking) {
-        rect(f.x + f.facing * 10, f.y - 52, 8, 27, color);
-        rect(f.x - f.facing * 10, f.y - 49, 8, 24, color);
-    } else if (f.attackTimer > 4) {
-        rect(f.x + f.facing * 10, f.y - 51, 29, 7, color);
-    } else {
-        rect(f.x + f.facing * 9, f.y - 51, 22, 6, color);
-        rect(f.x - f.facing * 14, f.y - 49, 20, 6, color);
-    }
-    rect(f.x - 10, f.y - 24, 7, 24, color);
-    rect(f.x + 3, f.y - 24, 7, 24, color);
-}
-void Game::render() const {
-    rect(0, 0, 400, 240, C2D_Color32(18, 17, 31, 255));
-    rect(0, 120, 400, 84, C2D_Color32(28, 25, 42, 255));
-    for (int i = 0; i < 8; ++i) {
-        const float x = i * 58.0f - 12.0f;
-        rect(x, 88 + (i % 3) * 8, 34, 116, C2D_Color32(11, 11, 22, 255));
-    }
-    rect(0, 205, 400, 35, C2D_Color32(44, 33, 36, 255));
-    rect(0, 203, 400, 2, GOLD);
-    if (screen_ == Screen::Title) {
-        circle(200, 83, 25, INK);
-        rect(187, 106, 26, 65, INK);
-        rect(150, 132, 100, 8, INK);
-        rect(55, 185, 290, 3, RED);
-        return;
-    }
-    if (screen_ == Screen::Select) {
-        for (int i = 0; i < 5; ++i) {
-            rect(82, 42 + i * 31, 236, 22, i == selected_ ? RED : GREY);
-            rect(94, 50 + i * 31, 100, 5, PALE);
-        }
-        return;
-    }
-    rect(18, 14, 164, 9, GREY);
-    rect(18, 14, 164.0f * player_.hp / 100.0f, 9, RED);
-    rect(218, 14, 164, 9, GREY);
-    rect(218, 14, 164.0f * rival_.hp / 160.0f, 9, RED);
-    rect(18, 27, player_.energy * 1.2f, 3, GOLD);
-    drawFighter(player_);
-    drawFighter(rival_);
-    if (screen_ == Screen::Result) {
-        rect(65, 82, 270, 65, C2D_Color32(12, 8, 12, 230));
-        rect(90, 104, won_ ? 220 : 150, 5, won_ ? GOLD : RED);
-    }
-}
+void Game::init(){screen_=Screen::Title;round_=1;frame_=0;shake_=0;for(auto&p:particles_)p.life=0;}
+void Game::beginFight(){player_=Fighter{};rival_=Fighter{};player_.x=112;rival_.x=288;rival_.hp=std::min(100+round_*4,140);screen_=Screen::Fight;for(auto&p:particles_)p.life=0;}
+void Game::startAttack(Fighter&f,int t){if(f.cooldown||f.attackTimer||f.stun||f.blocking)return;if(t==4&&f.energy<50)return;f.attackType=t;f.attackTimer=t==4?25:(t==3?18:(t==2?15:12));f.cooldown=t==4?42:(t==3?25:(t==2?21:15));if(t==4)f.energy-=50;}
+void Game::spawnImpact(float x,float y,u32 c){int s=0;for(int i=0;i<28;i++)if(!particles_[i].life){s=i;break;}const float a=(frame_*37+s*71%360)*.0174533f;particles_[s]={x,y,std::cos(a)*(1+s%3),std::sin(a)*(1+s%3)-1,13,c};}
+void Game::update(const Input&in){++frame_;if(shake_)--shake_;if(hitFlash_)--hitFlash_;for(auto&p:particles_)if(p.life){p.x+=p.vx;p.y+=p.vy;p.vy+=.12f;--p.life;}
+ if(screen_==Screen::Title){if(in.confirm||in.start)screen_=Screen::Select;return;}
+ if(screen_==Screen::Select){if(in.move<-.4f)selected_=(selected_+4)%5;if(in.move>.4f)selected_=(selected_+1)%5;if(in.confirm||in.start)beginFight();return;}
+ if(in.start&&screen_==Screen::Fight){screen_=Screen::Select;return;}
+ if(screen_==Screen::Result){if(resultTimer_)--resultTimer_;if(in.confirm||!resultTimer_){if(won_)++round_;screen_=Screen::Select;}return;} updateFight(in);}
+void Game::updateFight(const Input&in){
+ auto tick=[](Fighter&f){if(f.cooldown)--f.cooldown;if(f.attackTimer)--f.attackTimer;if(!f.attackTimer)f.attackType=0;if(f.stun)--f.stun;if(f.invuln)--f.invuln;if(f.comboTimer)--f.comboTimer;else f.combo=0;if(!f.grounded){f.vy+=.38f;f.y+=f.vy;if(f.y>=FLOOR){f.y=FLOOR;f.vy=0;f.grounded=true;}}};tick(player_);tick(rival_);
+ player_.blocking=(in.block||in.touchBlock)&&player_.grounded;if(!player_.stun&&!player_.blocking)player_.x+=in.move*(player_.attackTimer?1:3.15f);player_.x=clampf(player_.x,27,373);
+ if(player_.grounded&&in.jump&&!player_.stun){player_.vy=-7.6f;player_.grounded=false;}
+ if((in.dodge||in.touchDodge)&&!player_.invuln&&!player_.stun){player_.x=clampf(player_.x-player_.facing*35,27,373);player_.invuln=22;}
+ if(in.punch||in.touchPunch)startAttack(player_,1);if(in.kick||in.touchKick)startAttack(player_,2);if(in.weapon||in.touchWeapon)startAttack(player_,3);if(in.special||in.touchSpecial)startAttack(player_,4);
+ player_.facing=player_.x<rival_.x?1:-1;rival_.facing=rival_.x<player_.x?1:-1;float d=std::fabs(player_.x-rival_.x);
+ if(!rival_.stun){if(d>76)rival_.x+=rival_.facing*(round_>2?1.35f:1.05f);else if(!rival_.cooldown&&!rival_.attackTimer){int p=(frame_/32+round_)%5;if(d<48&&p==0)rival_.blocking=true;else{rival_.blocking=false;startAttack(rival_,p==1?3:(p==2?2:1));}}}
+ if(rival_.stun==0&&d<60&&frame_%97<12)rival_.blocking=true;else if(frame_%97>=12)rival_.blocking=false;rival_.x=clampf(rival_.x,27,373);
+ auto hit=[this](Fighter&a,Fighter&b,bool human){if(a.attackTimer<5||a.attackTimer>(a.attackType==4?21:13)||!a.attackType)return;float range=a.attackType==1?49:(a.attackType==2?66:(a.attackType==3?79:94));if(std::fabs(a.x-b.x)>range||b.invuln||a.facing!=(b.x>a.x?1:-1))return;int dmg=a.attackType==1?8:(a.attackType==2?13:(a.attackType==3?17:29));if(b.blocking)dmg=std::max(1,dmg/5);b.hp=std::max(0,b.hp-dmg);b.stun=b.blocking?4:11;b.x=clampf(b.x+a.facing*(b.blocking?4:12),27,373);a.energy=std::min(100,a.energy+(a.attackType==4?5:15));if(human){++a.combo;a.comboTimer=90;}else a.combo=0;spawnImpact((a.x+b.x)*.5f,b.y-43,b.blocking?CYAN:GOLD);shake_=b.blocking?2:5;hitFlash_=3;a.attackTimer=3;};
+ hit(player_,rival_,true);hit(rival_,player_,false);if(player_.hp<=0||rival_.hp<=0){won_=rival_.hp<=0;resultTimer_=170;screen_=Screen::Result;}}
+void Game::drawFighter(const Fighter&f,bool enemy)const{float x=f.x,y=f.y,face=(float)f.facing;u32 body=f.invuln&&(frame_%4<2)?PALE:(enemy?C2D_Color32(24,20,32,255):INK);float bob=f.grounded?std::sin(frame_*.13f)*1.2f:0,lean=f.attackTimer>5?face*5:0;circle(x,y+3,19,C2D_Color32(7,7,14,100));circle(x+lean,y-68+bob,10,body);rect(x-8+lean,y-57+bob,16,31,body);rect(x-11+lean,y-28+bob,8,25,body);rect(x+3+lean,y-28+bob,8,25,body);circle(x-face*7+lean,y-51+bob,5,body);rect(x-9+lean,y-31+bob,18,4,enemy?RED:GOLD);
+ if(f.blocking){rect(x+face*7,y-53,7,27,body);rect(x+face*12,y-58,7,10,body);rect(x-face*14,y-51,6,22,body);}else{float reach=f.attackTimer>4?(f.attackType==2?39:31):18;rect(x+face*7+lean,y-52+bob,reach,7,body);rect(x-face*12,y-49+bob,19,6,body);if(f.attackTimer>4&&f.attackType==3){rect(x+face*31,y-56,34,3,GOLD);circle(x+face*64,y-54,3,GOLD);}if(f.attackTimer>4&&f.attackType==4){circle(x+face*38,y-48,19,C2D_Color32(255,188,73,95));circle(x+face*38,y-48,11,GOLD);}}}
+void Game::render()const{float sx=shake_?((frame_%2)?(float)shake_:-(float)shake_):0;rect(0,0,400,240,C2D_Color32(13,17,34,255));circle(320,52,27,C2D_Color32(241,218,166,255));circle(320,52,23,C2D_Color32(205,205,194,255));rect(0,91,400,113,C2D_Color32(23,27,48,255));for(int i=0;i<9;i++){float x=i*52-8;rect(x,105+(i%3)*8,32,98,C2D_Color32(16,19,35,255));rect(x+8,95+(i%3)*8,16,12,C2D_Color32(32,35,54,255));}rect(0,198,400,42,C2D_Color32(40,32,39,255));rect(0,197,400,2,GOLD);for(int i=0;i<8;i++)rect(i*54,213,27,2,C2D_Color32(74,56,54,255));
+ if(screen_==Screen::Title){circle(200,65,28,INK);rect(186,91,28,69,INK);rect(148,112,104,9,INK);rect(177,158,12,38,INK);rect(211,158,12,38,INK);rect(48,202,304,3,RED);rect(65,211,270,2,GOLD);return;}
+ if(screen_==Screen::Select){for(int i=0;i<5;i++){int yy=40+i*31;rect(80,yy,240,24,i==selected_?RED:C2D_Color32(39,43,61,255));rect(90,yy+7,8,10,i==selected_?GOLD:MUTED);rect(108,yy+8,95+i*8,5,PALE);}return;}
+ rect(13,10,177,14,C2D_Color32(4,5,12,220));rect(210,10,177,14,C2D_Color32(4,5,12,220));bar(18,14,166,8,player_.hp,100,RED);bar(216,14,166,8,rival_.hp,std::min(100+round_*4,140),RED);bar(18,27,100,5,player_.energy,100,GOLD);rect(181,10,38,17,C2D_Color32(22,24,39,255));rect(190,16,20,3,GOLD);drawFighter(player_,false);drawFighter(rival_,true);for(const auto&p:particles_)if(p.life)circle(p.x+sx,p.y,2+(p.life%3),p.color);if(player_.combo>1)rect(18,43,player_.combo*5+34,5,GOLD);
+ if(screen_==Screen::Result){rect(48,74,304,91,C2D_Color32(5,7,17,235));rect(62,88,276,3,won_?GOLD:RED);rect(82,111,won_?236:150,8,won_?GOLD:RED);rect(62,151,276,3,PALE);}if(hitFlash_)rect(0,0,400,240,C2D_Color32(255,255,255,18));}
+void Game::renderControls()const{rect(0,0,320,240,C2D_Color32(12,15,29,255));rect(0,0,320,4,GOLD);rect(12,16,296,42,C2D_Color32(26,31,51,255));rect(22,29,90,5,CYAN);rect(22,41,165,3,MUTED);const u32 cs[6]={C2D_Color32(61,75,104,255),C2D_Color32(185,58,69,255),C2D_Color32(178,119,52,255),C2D_Color32(74,139,157,255),C2D_Color32(66,91,127,255),C2D_Color32(137,75,151,255)};for(int i=0;i<6;i++){int x=(i%3)*106+4,y=82+(i/3)*76;rect(x,y,98,65,C2D_Color32(28,34,54,255));rect(x+3,y+3,92,59,cs[i]);circle(x+49,y+26,12,PALE);rect(x+28,y+47,42,3,C2D_Color32(18,22,37,255));}rect(12,235,296,2,GOLD);}
 }
