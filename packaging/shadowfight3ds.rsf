@@ -1,0 +1,17 @@
+BasicInfo:
+  Title                   : "Shadow Fight 3DS"
+  CompanyCode             : "00"
+  ProductCode             : "CTR-P-SF3D"
+  ContentType             : Application
+  Logo                    : Homebrew
+
+TitleInfo:
+  UniqueId                : 0xF5A3C
+  Category                : Application
+
+Option:
+  UseOnSD                 : true
+  FreeProductCode         : true
+  MediaFootPadding        : false
+  EnableCrypt             : false
+  EnableCompress          : true
