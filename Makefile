@@ -7,6 +7,9 @@ endif
 TOPDIR ?= $(CURDIR)
 include $(DEVKITARM)/3ds_rules
 
+# This is a C++ project: use the compiler driver for linking, not raw ld.
+LD := $(CXX)
+
 TARGET      := ShadowFight3DS
 BUILD       := build
 SOURCES     := source
