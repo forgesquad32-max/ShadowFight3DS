@@ -27,5 +27,8 @@ all: $(TARGET).3dsx
 # 3DS build rules are shipped with devkitARM, not at the devkitPro root.
 include $(DEVKITPRO)/devkitARM/3ds_rules
 
+# The 3DS rules default to the raw linker; use the C++ driver for this project.
+LD := $(CXX)
+
 clean:
 	@rm -rf $(BUILD) $(TARGET).3dsx $(TARGET).elf $(TARGET).smdh $(TARGET).map
