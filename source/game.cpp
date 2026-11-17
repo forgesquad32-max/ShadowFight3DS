@@ -3,10 +3,26 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <cstring>
+#include <cstddef>
+#include <sys/stat.h>
 namespace sf3ds { namespace {
 constexpr float FLOOR=204;
 constexpr u32 BG=C2D_Color32(12,16,31,255),PANEL=C2D_Color32(26,33,53,255),PANEL2=C2D_Color32(38,47,70,255),INK=C2D_Color32(8,10,18,255),RED=C2D_Color32(224,62,72,255),GOLD=C2D_Color32(255,198,91,255),CYAN=C2D_Color32(83,210,221,255),PALE=C2D_Color32(244,236,220,255),GREEN=C2D_Color32(100,203,139,255),MUTED=C2D_Color32(150,160,181,255);
 C2D_TextBuf textBuf=nullptr;
+struct SaveData { char magic[8]; unsigned version; int level,xp,wins,coins,gems,weapon,armor; unsigned char weaponOwned[5],armorOwned[5]; unsigned checksum; };
+unsigned saveHash(const unsigned char*p,size_t n){unsigned h=2166136261u;for(size_t i=0;i<n;i++){h^=p[i];h*=16777619u;}return h;}
+void saveProgress(int level,int xp,int wins,int coins,int gems,int weapon,int armor,const bool*wo,const bool*ao){
+ mkdir("sdmc:/3ds",0777);mkdir("sdmc:/3ds/ShadowFight3DS",0777);SaveData d{};std::memcpy(d.magic,"SF3DSAV",7);d.version=1;d.level=level;d.xp=xp;d.wins=wins;d.coins=coins;d.gems=gems;d.weapon=weapon;d.armor=armor;
+ for(int i=0;i<5;i++){d.weaponOwned[i]=wo[i]?1:0;d.armorOwned[i]=ao[i]?1:0;}d.checksum=saveHash(reinterpret_cast<const unsigned char*>(&d),offsetof(SaveData,checksum));
+ FILE*f=std::fopen("sdmc:/3ds/ShadowFight3DS/save.dat","wb");if(f){std::fwrite(&d,sizeof(d),1,f);std::fflush(f);std::fclose(f);}
+}
+bool loadProgress(int&level,int&xp,int&wins,int&coins,int&gems,int&weapon,int&armor,bool*wo,bool*ao){
+ FILE*f=std::fopen("sdmc:/3ds/ShadowFight3DS/save.dat","rb");if(!f)return false;SaveData d{};bool ok=std::fread(&d,sizeof(d),1,f)==1;std::fclose(f);
+ if(!ok||std::memcmp(d.magic,"SF3DSAV",7)!=0||d.version!=1||d.checksum!=saveHash(reinterpret_cast<const unsigned char*>(&d),offsetof(SaveData,checksum)))return false;
+ level=std::max(1,d.level);xp=std::max(0,d.xp);wins=std::max(0,d.wins);coins=std::max(0,d.coins);gems=std::max(0,d.gems);weapon=std::max(0,std::min(4,d.weapon));armor=std::max(0,std::min(4,d.armor));
+ for(int i=0;i<5;i++){wo[i]=d.weaponOwned[i]!=0;ao[i]=d.armorOwned[i]!=0;}wo[0]=true;ao[0]=true;if(!wo[weapon])weapon=0;if(!ao[armor])armor=0;return true;
+}
 float clampf(float v,float a,float b){return std::max(a,std::min(b,v));}
 void rect(float x,float y,float w,float h,u32 c){C2D_DrawRectSolid(x,y,.5f,w,h,c);}
 void circle(float x,float y,float r,u32 c){C2D_DrawCircleSolid(x,y,.5f,r,c);}
@@ -20,7 +36,7 @@ const char* stages[]={"Ashen Courtyard","Bamboo Crossing","Sunken Temple","Crims
 void Game::drawText(const char*s,float x,float y,float scale,u32 color)const{
  if(!textBuf)return;C2D_Text t{};C2D_TextParse(&t,textBuf,s);C2D_DrawText(&t,C2D_WithColor,x,y,0,scale,scale,color);
 }
-void Game::init(){screen_=Screen::Title;frame_=0;level_=1;xp_=0;coins_=500;gems_=25;wins_=0;weapon_=armor_=0;if(!textBuf)textBuf=C2D_TextBufNew(4096);}
+void Game::init(){screen_=Screen::Title;frame_=0;level_=1;xp_=0;coins_=500;gems_=25;wins_=0;weapon_=armor_=0;if(!textBuf)textBuf=C2D_TextBufNew(4096);loadProgress(level_,xp_,wins_,coins_,gems_,weapon_,armor_,weaponOwned_,armorOwned_);}
 void Game::beginFight(Battle b){
  battle_=b;player_=Fighter{};rival_=Fighter{};player_.x=108;rival_.x=292;
  int hp=100+level_*7+(b==Battle::Boss?100:0);rival_.hp=rival_.maxHp=hp;
@@ -34,8 +50,8 @@ void Game::handleMenuTap(const Input&in){
  if(screen_==Screen::Hub){if(y>177){if(x<64)hubChoice_=0;else if(x<128)hubChoice_=1;else if(x<192)hubChoice_=2;else if(x<256)hubChoice_=3;else hubChoice_=4;
   if(hubChoice_==0)beginFight(Battle::Story);else if(hubChoice_==1)beginFight(Battle::Duel);else if(hubChoice_==2)beginFight(Battle::Boss);else if(hubChoice_==3){shopChoice_=0;screen_=Screen::Shop;}else{gearChoice_=0;screen_=Screen::Gear;}return;}
   if(y>92&&y<166){if(x<160)beginFight(Battle::Story);else beginFight(Battle::Duel);}
- }else if(screen_==Screen::Shop){if(y>216){screen_=Screen::Hub;return;}if(y<96||y>211)return;shopChoice_=clampf((y-96)/23,0,4);int i=shopChoice_;if(i>0&&!weaponOwned_[i]){if(i==4){if(gems_>=weaponCost[i]){gems_-=weaponCost[i];weaponOwned_[i]=true;}}else if(coins_>=weaponCost[i]){coins_-=weaponCost[i];weaponOwned_[i]=true;}}else if(weaponOwned_[i])weapon_=i;
- }else if(screen_==Screen::Gear){if(y>216){screen_=Screen::Hub;return;}if(y<96||y>211)return;gearChoice_=clampf((y-96)/23,0,4);int i=gearChoice_;if(armorOwned_[i])armor_=i;else if(i==4){if(gems_>=armorCost[i]){gems_-=armorCost[i];armorOwned_[i]=true;armor_=i;}}else if(coins_>=armorCost[i]){coins_-=armorCost[i];armorOwned_[i]=true;armor_=i;}}
+ }else if(screen_==Screen::Shop){if(y>216){screen_=Screen::Hub;return;}if(y<96||y>211)return;shopChoice_=clampf((y-96)/23,0,4);int i=shopChoice_;if(i>0&&!weaponOwned_[i]){if(i==4){if(gems_>=weaponCost[i]){gems_-=weaponCost[i];weaponOwned_[i]=true;saveProgress(level_,xp_,wins_,coins_,gems_,weapon_,armor_,weaponOwned_,armorOwned_);}}else if(coins_>=weaponCost[i]){coins_-=weaponCost[i];weaponOwned_[i]=true;saveProgress(level_,xp_,wins_,coins_,gems_,weapon_,armor_,weaponOwned_,armorOwned_);}}else if(weaponOwned_[i]){weapon_=i;saveProgress(level_,xp_,wins_,coins_,gems_,weapon_,armor_,weaponOwned_,armorOwned_);}
+ }else if(screen_==Screen::Gear){if(y>216){screen_=Screen::Hub;return;}if(y<96||y>211)return;gearChoice_=clampf((y-96)/23,0,4);int i=gearChoice_;if(armorOwned_[i]){armor_=i;saveProgress(level_,xp_,wins_,coins_,gems_,weapon_,armor_,weaponOwned_,armorOwned_);}else if(i==4){if(gems_>=armorCost[i]){gems_-=armorCost[i];armorOwned_[i]=true;armor_=i;saveProgress(level_,xp_,wins_,coins_,gems_,weapon_,armor_,weaponOwned_,armorOwned_);}}else if(coins_>=armorCost[i]){coins_-=armorCost[i];armorOwned_[i]=true;armor_=i;saveProgress(level_,xp_,wins_,coins_,gems_,weapon_,armor_,weaponOwned_,armorOwned_);}}
 }
 void Game::update(const Input&in){
  ++frame_;if(shake_)--shake_;if(hitFlash_)--hitFlash_;
@@ -57,7 +73,7 @@ void Game::updateFight(const Input&in){
  rival_.x=clampf(rival_.x,27,373);
  auto hit=[this](Fighter&a,Fighter&b,bool human){if(a.attackTimer<5||a.attackTimer>(a.attackType==4?21:13)||!a.attackType)return;float range=a.attackType==1?49:(a.attackType==2?66:(a.attackType==3?79:94));if(std::fabs(a.x-b.x)>range||b.invuln||a.facing!=(b.x>a.x?1:-1))return;int dmg=a.attackType==1?8:(a.attackType==2?13:(a.attackType==3?17:29));if(human)dmg+=weapon_*3;else dmg=std::max(1,dmg-armor_*2);if(b.blocking)dmg=std::max(1,dmg/5);b.hp=std::max(0,b.hp-dmg);b.stun=b.blocking?4:11;b.x=clampf(b.x+a.facing*(b.blocking?4:12),27,373);a.energy=std::min(100,a.energy+(a.attackType==4?5:15));if(human){++a.combo;a.comboTimer=90;}else a.combo=0;spawnImpact((a.x+b.x)*.5f,b.y-43,b.blocking?CYAN:GOLD);shake_=b.blocking?2:5;hitFlash_=3;a.attackTimer=3;};
  hit(player_,rival_,true);hit(rival_,player_,false);
- if(player_.hp<=0||rival_.hp<=0){won_=rival_.hp<=0;rewardCoins_=won_?(battle_==Battle::Boss?350: battle_==Battle::Duel?90:65):20;rewardGems_=won_&&battle_==Battle::Boss?3:0;if(won_){coins_+=rewardCoins_;gems_+=rewardGems_;xp_+=battle_==Battle::Boss?150:60;++wins_;if(xp_>=level_*100){xp_-=level_*100;++level_;}}resultTimer_=200;screen_=Screen::Result;}
+ if(player_.hp<=0||rival_.hp<=0){won_=rival_.hp<=0;rewardCoins_=won_?(battle_==Battle::Boss?350: battle_==Battle::Duel?90:65):20;rewardGems_=won_&&battle_==Battle::Boss?3:0;if(won_){coins_+=rewardCoins_;gems_+=rewardGems_;xp_+=battle_==Battle::Boss?150:60;++wins_;if(xp_>=level_*100){xp_-=level_*100;++level_;}}saveProgress(level_,xp_,wins_,coins_,gems_,weapon_,armor_,weaponOwned_,armorOwned_);resultTimer_=200;screen_=Screen::Result;}
 }
 void Game::drawFighter(const Fighter&f,bool enemy)const{
  float x=f.x,y=f.y,face=(float)f.facing,bob=f.grounded?std::sin(frame_*.12f)*1.3f:0;
