@@ -9,11 +9,11 @@ GitHub Actions builds the project in the cloud; no PC is required.
 1. Open the repository's **Actions** tab.
 2. Open the latest **Build Nintendo 3DS game** run.
 3. Wait for the build to finish successfully.
-4. Download the release artifact and extract it.
+4. Download the `ShadowFight3DS-3dsx` artifact and extract it.
 5. Copy `ShadowFight3DS.3dsx` to `/3ds/ShadowFight3DS/` on the SD card.
 6. Launch it through Homebrew Launcher.
 
-The CIA packaging job is experimental and is not considered ready until its workflow succeeds and its artifact is available. A CIA requires custom firmware and a CIA installer.
+This workflow intentionally produces **only `.3dsx` and `.elf` files**. It does not generate a CIA; you can handle CIA conversion separately.
 
 ## Controls
 
@@ -35,13 +35,13 @@ The bottom touchscreen is now a menu, shop, gear and loadout display; combat use
 - Original armored martial-arts character designs drawn with lightweight 2D primitives
 - Campaign stage names and player XP/level progression
 - Duel and boss battle modes
-- Coin and gem rewards
+- Gold coin and gem rewards, with local save/load for player level, XP, wins, balances, owned weapon/armor tiers and equipped gear
 - Weapon shop with five weapon tiers; weapons increase attack damage
 - Armor shop with five armor tiers; armor increases maximum health and reduces incoming damage
 - Combo feedback, hit sparks, impact flashes and screen shake
 
 ## Development status and limitations
 
-This is an expanding homebrew prototype, not a finished commercial game. Character art is currently procedural 2D artwork rather than hand-drawn sprite animation. The economy and progression currently reset when the application is restarted; persistent save files, authored animation, sound/music, more enemy moves, more stages and full balance testing remain future work.
+This is an expanding homebrew prototype, not a finished commercial game. Character art is currently procedural 2D artwork rather than hand-drawn sprite animation. The local save uses a versioned, checksummed file at `sdmc:/3ds/ShadowFight3DS/save.dat` and writes through a temporary file before replacing the previous save. The current save covers progression, currency, owned shop tiers and equipped weapon/armor. It does not yet cover the full inventory, settings, achievements, chest history or transaction ledger. Authored sprite animation, sound/music, expanded enemy moves, more stages, and full balance and hardware testing remain future work.
 
 Build success does not guarantee performance on every 3DS model. Test on hardware before distributing a release.
