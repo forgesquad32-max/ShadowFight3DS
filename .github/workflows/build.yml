@@ -104,10 +104,10 @@ jobs:
                           if y > 43:
                               c = (224, 78, 54, 255)
                       row.extend(c)
-                  pixels.extend(b"\\x00" + row)
+                  pixels.extend(b"\x00" + row)
               def chunk(tag, data):
                   return struct.pack(">I", len(data)) + tag + data + struct.pack(">I", zlib.crc32(tag+data) & 0xffffffff)
-              data = b"\\x89PNG\\r\\n\\x1a\\n"
+              data = b"\x89PNG\r\n\x1a\n"
               data += chunk(b"IHDR", struct.pack(">2I5B", width, height, 8, 6, 0, 0, 0))
               data += chunk(b"IDAT", zlib.compress(bytes(pixels), 9))
               data += chunk(b"IEND", b"")
@@ -119,7 +119,7 @@ jobs:
               wav.setnchannels(1)
               wav.setsampwidth(2)
               wav.setframerate(22050)
-              wav.writeframes(b"\\x00\\x00" * 22050)
+              wav.writeframes(b"\x00\x00" * 22050)
           PY
           bannertool makesmdh -s "Shadow Fight 3DS" -l "Original 2D shadow fighting game" -p "Forge Squad" -i build/icon.png -o build/ShadowFight3DS.icn
           bannertool makebanner -i build/banner.png -a build/silence.wav -o build/ShadowFight3DS.bnr
