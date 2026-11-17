@@ -106,7 +106,7 @@ void Game::render()const{
  drawText("LEVEL",18,59,.32f,MUTED);char s[64];std::snprintf(s,sizeof(s),"%d",level_);drawText(s,18,78,.58f,PALE);
  std::snprintf(s,sizeof(s),"COINS %d",coins_);drawText(s,104,59,.36f,GOLD);std::snprintf(s,sizeof(s),"GEMS %d",gems_);drawText(s,260,59,.36f,CYAN);
  bar(18,105,364,8,xp_,level_*100,CYAN);drawText("EXPERIENCE",18,119,.27f,MUTED);
- if(screen_==Screen::Hub){drawText("CAMPAIGN",30,147,.45f,PALE);drawText(stages_[(level_-1)%10],30,169,.33f,CYAN);drawText("DUEL",250,147,.45f,PALE);drawText("TEST YOUR SKILL",230,169,.27f,MUTED);drawText("SELECT A MODE BELOW",113,211,.31f,PALE);}
+ if(screen_==Screen::Hub){drawText("CAMPAIGN",30,147,.45f,PALE);drawText(stages[(level_-1)%10],30,169,.33f,CYAN);drawText("DUEL",250,147,.45f,PALE);drawText("TEST YOUR SKILL",230,169,.27f,MUTED);drawText("SELECT A MODE BELOW",113,211,.31f,PALE);}
  else if(screen_==Screen::Shop){drawText("WEAPON FORGE",26,53,.47f,GOLD);for(int i=0;i<5;i++){int y=84+i*27;rect(18,y-3,364,23,i==shopChoice_?PANEL2:PANEL);drawText(weapons[i],27,y,.31f,PALE);if(weaponOwned_[i])drawText(weapon_==i?"EQUIPPED":"OWNED",294,y,.27f,GREEN);else{std::snprintf(s,sizeof(s),"%d %s",weaponCost[i],i==4?"GEMS":"COINS");drawText(s,280,y,.27f,GOLD);}}drawText("TAP ITEM TO BUY / EQUIP",75,222,.29f,CYAN);}
  else if(screen_==Screen::Gear){drawText("ARMOR & EQUIPMENT",26,53,.47f,GOLD);for(int i=0;i<5;i++){int y=84+i*27;rect(18,y-3,364,23,i==gearChoice_?PANEL2:PANEL);drawText(armors[i],27,y,.31f,PALE);if(armorOwned_[i])drawText(armor_==i?"EQUIPPED":"OWNED",294,y,.27f,GREEN);else{std::snprintf(s,sizeof(s),"%d %s",armorCost[i],i==4?"GEMS":"COINS");drawText(s,280,y,.27f,GOLD);}}drawText("TAP ITEM TO BUY / EQUIP",75,222,.29f,CYAN);}
 }
